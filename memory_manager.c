@@ -90,6 +90,7 @@ void coalesce_free_blocks() {
             // Skip over the next block by adjusting the 'next' pointer
             mem_struct *next_block = current->next;
             current->next = next_block->next;
+            free(next_block);
         } else {
             // Move to the next block in the list
             current = current->next;

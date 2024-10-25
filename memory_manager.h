@@ -3,6 +3,7 @@
 
 #include <stddef.h>  // For size_t
 #include <stdbool.h> // For bool
+#include <pthread.h>
 
 // Define the mem_struct and function prototypes for the memory manager
 

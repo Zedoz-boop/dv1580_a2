@@ -182,6 +182,7 @@ void sanityCheck(size_t size, char *block, char expected_value)
     for (int i = 0; i < size; ++i)
     {
         my_assert(block[i] == expected_value);
+
     }
 }
 
@@ -934,6 +935,7 @@ int main(int argc, char *argv[])
             test_repeated_fit_reuse_multithread((TestParams){.num_threads = base_num_threads, .memory_size = 1024, .iterations = pow(10, i)});
 
         test_memory_fragmentation_multithread((TestParams){.num_threads = base_num_threads, .memory_size = 2048});
+
         test_random_blocks_multithread((TestParams){.num_threads = base_num_threads, .block_size = 1024});
 
         break;

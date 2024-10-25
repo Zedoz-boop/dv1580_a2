@@ -4,7 +4,7 @@
 #include <string.h>
 #include <pthread.h>
 
-pthread_mutex_t memory_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t memory_mutex;
 
 typedef struct mem_struct {
     struct mem_struct *next;
@@ -17,13 +17,11 @@ static void *memorypool = NULL; // Pool for actual memory
 static mem_struct *head = NULL; // Pool for block metadata
 size_t memory_available;
 
-
-void coalesce_free_blocks();
 // Initialize the memory manager
 void mem_init(size_t size) {
     pthread_mutex_lock(&memory_mutex);
 
-    memorypool = malloc(size);
+    memorypool = malloc(size * sizeof(char *));
     head = malloc(sizeof(mem_struct));
 
     if (head == NULL || memorypool == NULL) {
@@ -53,7 +51,7 @@ void *mem_alloc(size_t size) {
 
     if (size == 0) {
         pthread_mutex_unlock(&memory_mutex);
-        return (char*)memorypool;  // Invalid allocation request
+        return memorypool;  // Invalid allocation request
     }
 
     mem_struct *current = head;
@@ -70,7 +68,7 @@ void *mem_alloc(size_t size) {
                 }
                 new_block->available = true;
                 new_block->size = current->size - size;
-                new_block->memaddress = (char*)current->memaddress + size;
+                new_block->memaddress = current->memaddress + size;
                 new_block->next = current->next;
 
                 current->next = new_block;
@@ -82,7 +80,7 @@ void *mem_alloc(size_t size) {
                 memory_available -= current->size;
             }
             pthread_mutex_unlock(&memory_mutex);
-            return current->memaddress;
+            return (char*)current->memaddress;
         }
         current = current->next;
     }
@@ -93,42 +91,57 @@ void *mem_alloc(size_t size) {
 
 // Free memory and coalesce adjacent free blocks
 void mem_free(void *block) {
+    if (block == NULL) {
+        return;  // Returns if trying to free NULL
+    }
+
     pthread_mutex_lock(&memory_mutex);
 
-    if (block == NULL) {
+    mem_struct *to_free = NULL;
+    mem_struct *prev = NULL;
+    mem_struct *current = head;
+
+    // Locate the block in the list
+    while (current != NULL) {
+        if (current->memaddress == block) {
+            to_free = current;
+            break;
+        }
+        prev = current;
+        current = current->next;
+    }
+
+    // If block not found, exit
+    if (to_free == NULL) {
         pthread_mutex_unlock(&memory_mutex);
         return;
     }
 
-    mem_struct *current = head;
-    while (current != NULL) {
-        if (current->memaddress == block) {
-            if (!current->available) {
-                current->available = true;
-                memory_available += current->size;
-                coalesce_free_blocks();
-                pthread_mutex_unlock(&memory_mutex);
-                return;
-            }
-        }
-        current = current->next;
+    // Mark block as free
+    to_free->available = true;
+    memory_available += to_free->size;
+
+    // Initialize flags for coalescing checks
+    mem_struct *next_block = to_free->next;
+    bool free_after = (next_block != NULL && next_block->available);
+    bool free_before = (prev != NULL && prev->available);
+
+    // Coalesce based on adjacent block availability
+    if (free_after && free_before) {
+        // Merge previous, current, and next blocks
+        prev->size += to_free->size + next_block->size;
+        prev->next = next_block->next;
+    } else if (free_after) {
+        // Merge current and next blocks
+        to_free->size += next_block->size;
+        to_free->next = next_block->next;
+    } else if (free_before) {
+        // Merge previous and current blocks
+        prev->size += to_free->size;
+        prev->next = to_free->next;
     }
 
     pthread_mutex_unlock(&memory_mutex);
-}
-
-void coalesce_free_blocks() {
-    mem_struct *current = head;
-
-    while (current != NULL && current->next != NULL) {
-        if (current->available && current->next->available) {
-            current->size += current->next->size;
-            mem_struct *next_block = current->next;
-            current->next = next_block->next;
-        } else {
-            current = current->next;
-        }
-    }
 }
 
 // Resize a memory block
@@ -185,14 +198,15 @@ void *mem_resize(void *block, size_t size) {
 void mem_deinit() {
     pthread_mutex_lock(&memory_mutex);
 
+    free(memorypool);
     mem_struct *current = head;
-    while (current) {
+    while (current != NULL) {
         mem_struct *next_block = current->next;
         free(current);
         current = next_block;
     }
-    free(memorypool);
     head = NULL;
+    memorypool = NULL;
     memory_available = 0;
 
     pthread_mutex_unlock(&memory_mutex);

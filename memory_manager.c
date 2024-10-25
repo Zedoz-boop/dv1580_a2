@@ -39,6 +39,7 @@ void mem_init(size_t size) {
     memory_available = size;
 
     pthread_mutex_unlock(&memory_mutex);
+    return;
 }
 
 // Allocate memory from the pool

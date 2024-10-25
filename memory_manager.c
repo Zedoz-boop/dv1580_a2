@@ -21,7 +21,7 @@ size_t memory_available;
 void mem_init(size_t size) {
     pthread_mutex_lock(&memory_mutex);
 
-    memorypool = malloc(size * sizeof(char *));
+    memorypool = malloc(size);
     head = malloc(sizeof(mem_struct));
 
     if (head == NULL || memorypool == NULL) {

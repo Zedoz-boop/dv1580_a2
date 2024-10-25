@@ -161,18 +161,13 @@ void *mem_resize(void *block, size_t size) {
                 pthread_mutex_unlock(&memory_mutex);
                 return (char*)current->memaddress;  // Return the same block
             } else {
+                mem_free(current);
                 // Allocate a new block
                 void *new_block = mem_alloc(size);
                 if (new_block == NULL) {
                     pthread_mutex_unlock(&memory_mutex);
                     return NULL;  // Allocation failed
                 }
-
-                // Copy the old data to the new block
-                memcpy(new_block, block, current->size);
-
-                // Free the old block
-                mem_free(current);
 
                 pthread_mutex_unlock(&memory_mutex);
                 return new_block;

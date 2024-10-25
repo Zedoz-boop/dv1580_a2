@@ -169,6 +169,12 @@ void *mem_resize(void *block, size_t size) {
                     return NULL;  // Allocation failed
                 }
 
+                // Copy the old data to the new block
+                memcpy(new_block, block, current->size);
+
+                // Free the old block
+                mem_free(block);
+
                 pthread_mutex_unlock(&memory_mutex);
                 return new_block;
             }
@@ -187,9 +193,10 @@ void mem_deinit() {
 
     free(memorypool); // Free the memorypool
     mem_struct *current = head; 
+    mem_struct *next_block = NULL;
     // Free every strut
     while (current != NULL) {
-        mem_struct *next_block = current->next;
+        next_block = current->next;
         free(current);
         current = next_block;
     }

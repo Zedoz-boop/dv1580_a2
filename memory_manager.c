@@ -172,7 +172,7 @@ void *mem_resize(void *block, size_t size) {
                 memcpy(new_block, block, current->size);
 
                 // Free the old block
-                mem_free(block);
+                mem_free(current);
 
                 pthread_mutex_unlock(&memory_mutex);
                 return new_block;

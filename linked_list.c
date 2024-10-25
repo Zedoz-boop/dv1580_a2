@@ -303,16 +303,7 @@ int list_count_nodes(Node** list_head) {
 
 void list_cleanup(Node** list_head) {
     pthread_mutex_lock(&memory_mutex);
-    Node* current = *list_head;
-    Node* next_node;
-
-    // Traverse and free all nodes
-    while (current != NULL) {
-        next_node = current->next;  // Save the next node
-        mem_free(current);          // Free the current node using the custom memory manager
-        current = next_node;        // Move to the next node
-    }
-
+    mem_deinit();
     // Set head to NULL after all nodes are freed
     *list_head = NULL;
     //debug

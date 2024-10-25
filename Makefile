@@ -10,7 +10,9 @@ OBJ = $(SRC:.c=.o)
 # Default target
 all: mmanager list test_mmanager test_list
 
-# Rule to create the dynamic library
+# Rule to create the dynamic library for memory manager
+mmanager: $(LIB_NAME)
+
 $(LIB_NAME): $(OBJ)
 	$(CC) -shared -o $@ $(OBJ)
 
@@ -18,31 +20,28 @@ $(LIB_NAME): $(OBJ)
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Build the memory manager
-mmanager: $(LIB_NAME)
+# Compile linked list application and link with memory manager library
+list: $(LIB_NAME) linked_list.o
+	$(CC) -o linked_list_app linked_list.c test_linked_list.c -L. -lmemory_manager -lpthread -lm -Wl,-rpath=.
 
-# Build the linked list
-list: linked_list.o
-
-# Test target to run the memory manager test program
+# Test memory manager program
 test_mmanager: $(LIB_NAME)
 	$(CC) -o test_memory_manager test_memory_manager.c -L. -lmemory_manager -lpthread -lm -Wl,-rpath=.
-	
-# Test target to run the linked list test program
-test_list: $(LIB_NAME) linked_list.o
-	$(CC) -o test_linked_list linked_list.c test_linked_list.c -L. -lmemory_manager -lpthread -lm -Wl,-rpath=.
 
-#run tests
+# Test linked list program
+test_list: list
+
+# Run all tests
 run_tests: run_test_mmanager run_test_list
-	
-# run test cases for the memory manager
-run_test_mmanager:
+
+# Run memory manager test
+run_test_mmanager: test_mmanager
 	./test_memory_manager
 
-# run test cases for the linked list
-run_test_list:
-	./test_linked_list
+# Run linked list test
+run_test_list: test_list
+	./linked_list_app
 
-# Clean target to clean up build files
+# Clean target to remove build files
 clean:
-	rm -f $(OBJ) $(LIB_NAME) test_memory_manager test_linked_list linked_list.o
+	rm -f $(OBJ) $(LIB_NAME) test_memory_manager linked_list_app linked_list.o test_memory_manager.o test_linked_list.o

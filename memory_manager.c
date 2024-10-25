@@ -141,7 +141,7 @@ void *mem_resize(void *block, size_t size) {
 
     if (block == NULL) {
         pthread_mutex_unlock(&memory_mutex);
-        return NULL;  // Allocate a new block if NULL
+        return mem_alloc(size);  // Allocate a new block if NULL
     }
 
     mem_struct *current = head;
@@ -157,6 +157,7 @@ void *mem_resize(void *block, size_t size) {
                 // Merge with the next block if it's free and large enough
                 current->size += current->next->size;
                 current->next = current->next->next; // Skip the next block
+                free(current->next);
                 pthread_mutex_unlock(&memory_mutex);
                 return (char*)current->memaddress;  // Return the same block
             } else {
